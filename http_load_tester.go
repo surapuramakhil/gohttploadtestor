@@ -103,7 +103,6 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				start := time.Now()
 				var req *http.Request
 				var err error
 
@@ -121,7 +120,11 @@ func main() {
 				}
 
 				client := &http.Client{}
+
+				startTime := time.Now()
 				resp, err := client.Do(req)
+				endTime := time.Now()
+
 				if err != nil || resp.StatusCode >= 400 {
 					metrics.mu.Lock()
 					metrics.TotalErrors++
@@ -129,7 +132,7 @@ func main() {
 					return
 				}
 				metrics.mu.Lock()
-				metrics.Latencies = append(metrics.Latencies, time.Since(start))
+				metrics.Latencies = append(metrics.Latencies, endTime.Sub(startTime))
 				metrics.TotalRequests++
 				metrics.mu.Unlock()
 			}()
