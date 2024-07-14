@@ -65,12 +65,39 @@ Another factor is Developer Experience (high imapact) - My Strongest language is
 
 # Manual
 
+Docker build:
+```zsh
+docker build -t httploadtester . 
+```
 
+Docker run: (taken google as example)
+```zsh
+docker run --rm loadtester --url https://google.com --qps 10
+```
 
+command line Args:
 
+To configure the HTTP load tester, you can use the following command line arguments:
 
+- `--url`: Specifies the HTTP address to load test.
+- `--qps`: Sets the queries per second (QPS) rate for generating requests. The default value is 1.
+- `--method`: Specifies the HTTP method to use. The default value is "GET".
+- `--payload`: Includes a payload in the request body. This is useful for scenarios such as DB write load testing or performance testing. The default value is an empty string.
+- `--file`: Specifies the path to the file to upload. This is applicable when using file uploads as a payload. The default value is an empty string.
+- `--duration`: Sets the duration of the test in seconds. The default value is 10.
 
+if both --file & --payload is passed - file is considered
 
+Here is an example usage of the command line arguments:
+--url https://google.com --qps 10
+
+ps. Docker build doesn't execute integration tests.
+
+This design is intentional - as this give ability to run integration tests only when needed
+command to run integration tests
+```zsh
+go test -tags integration
+``` 
 
 <br/><br/>
 
