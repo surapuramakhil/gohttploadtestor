@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"os"
 )
 
 type Config struct {
@@ -24,7 +25,7 @@ func ParseFlags() *Config {
 	flag.Parse()
 
 	if *url == "" {
-		fmt.Println("URL is required")
+		fmt.Fprintln(os.Stderr, "URL is required")
 		return nil
 	}
 
