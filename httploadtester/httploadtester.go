@@ -3,48 +3,31 @@ package main
 import (
 	"bytes"
 	"context"
-	"flag"
-	"fmt"
-	"io"
-	"mime/multipart"
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/schollz/progressbar/v3"
+	"httploadtester/config"
+	"httploadtester/httpclient"
+	"httploadtester/metrics"
+	"httploadtester/progress"
 )
 
-type Metrics struct {
-	TotalRequests int
-	TotalErrors   int
-	Latencies     []time.Duration
-	mu            sync.Mutex
-}
-
 func main() {
-	url := flag.String("url", "", "HTTP address to load test")
-	qps := flag.Int("qps", 1, "Queries per second")
-	method := flag.String("method", "GET", "HTTP method to use")
-	payload := flag.String("payload", "", "Payload to include in the request body")
-	filePath := flag.String("file", "", "Path to the file to upload")
-	duration := flag.Int("duration", 10, "Duration of the test in seconds")
-	flag.Parse()
-
-	if *url == "" {
-		fmt.Println("URL is required")
+	cfg := config.ParseFlags()
+	if cfg == nil {
 		return
 	}
 
-	metrics := &Metrics{}
+	metrics := &metrics.Metrics{}
 	var wg sync.WaitGroup
-	ticker := time.NewTicker(time.Second / time.Duration(*qps))
+	ticker := time.NewTicker(time.Second / time.Duration(cfg.QPS))
 	defer ticker.Stop()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*duration)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Duration)*time.Second)
 	defer cancel()
 
 	// Handle graceful shutdown
@@ -55,8 +38,8 @@ func main() {
 		cancel()
 	}()
 
-	bar := initializeProgressBar(*duration)
-	
+	bar := progress.InitializeProgressBar(cfg.Duration)
+
 	// Start a goroutine to update the progress bar
 	go func() {
 		for {
@@ -66,28 +49,18 @@ func main() {
 				return
 			case <-time.After(1 * time.Second):
 				bar.Add(1)
-				printStatus(metrics)
+				metrics.PrintStatus()
 			}
 		}
 	}()
 
-	// Start a goroutine to print the status periodically
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(1 * time.Second):
-				
-			}
-		}
-	}()
+	client := &http.Client{}
 
 	for {
 		select {
 		case <-ctx.Done():
 			wg.Wait()
-			printMetrics(metrics)
+			metrics.PrintFinalMetrics()
 			return
 		case <-ticker.C:
 			wg.Add(1)
@@ -96,117 +69,28 @@ func main() {
 				var req *http.Request
 				var err error
 
-				if *filePath != "" {
-					req, err = newFileUploadRequest(*url, *method, *filePath)
+				if cfg.FilePath != "" {
+					req, err = httpclient.NewFileUploadRequest(cfg.URL, cfg.Method, cfg.FilePath)
 				} else {
-					req, err = http.NewRequest(*method, *url, bytes.NewBufferString(*payload))
+					req, err = http.NewRequest(cfg.Method, cfg.URL, bytes.NewBufferString(cfg.Payload))
 				}
 
 				if err != nil {
-					metrics.mu.Lock()
-					metrics.TotalErrors++
-					metrics.mu.Unlock()
+					metrics.RecordError()
 					return
 				}
-
-				client := &http.Client{}
 
 				startTime := time.Now()
-				resp, err := client.Do(req)
+				resp, err := httpclient.SendRequest(client, req)
 				endTime := time.Now()
-
-				if err != nil || resp.StatusCode >= 400 {
-					metrics.mu.Lock()
-					metrics.TotalErrors++
-					metrics.mu.Unlock()
+				if err != nil {
+					metrics.RecordError()
 					return
 				}
-				metrics.mu.Lock()
-				metrics.Latencies = append(metrics.Latencies, endTime.Sub(startTime))
-				metrics.TotalRequests++
-				metrics.mu.Unlock()
+				defer resp.Body.Close()
+
+				metrics.RecordLatency(endTime.Sub(startTime))
 			}()
 		}
 	}
-}
-
-func newFileUploadRequest(uri, method, path string) (*http.Request, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("file", filepath.Base(path))
-	if err != nil {
-		return nil, err
-	}
-	_, err = io.Copy(part, file)
-	if err != nil {
-		return nil, err
-	}
-
-	err = writer.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(method, uri, body)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	return req, nil
-}
-
-func printStatus(metrics *Metrics) {
-	metrics.mu.Lock()
-	defer metrics.mu.Unlock()
-
-	totalLatency := time.Duration(0)
-	for _, latency := range metrics.Latencies {
-		totalLatency += latency
-	}
-	averageLatency := time.Duration(0)
-	if len(metrics.Latencies) > 0 {
-		averageLatency = totalLatency / time.Duration(len(metrics.Latencies))
-	}
-
-	
-	fmt.Printf("Total Requests: %d | Total Errors: %d | Average Latency: %s", metrics.TotalRequests, metrics.TotalErrors, averageLatency)
-}
-
-func printMetrics(metrics *Metrics) {
-	metrics.mu.Lock()
-	defer metrics.mu.Unlock()
-
-	totalLatency := time.Duration(0)
-	for _, latency := range metrics.Latencies {
-		totalLatency += latency
-	}
-	averageLatency := time.Duration(0)
-	if len(metrics.Latencies) > 0 {
-		averageLatency = totalLatency / time.Duration(len(metrics.Latencies))
-	}
-
-	fmt.Printf("\nFinal Results:\n")
-	fmt.Printf("Total Requests: %d\n", metrics.TotalRequests)
-	fmt.Printf("Total Errors: %d\n", metrics.TotalErrors)
-	fmt.Printf("Average Latency: %s\n", averageLatency)
-}
-
-func initializeProgressBar(duration int) *progressbar.ProgressBar {
-	bar := progressbar.NewOptions(duration,
-		progressbar.OptionSetDescription("\r Running load test..."),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        "=",
-			SaucerHead:    ">",
-			SaucerPadding: " ",
-			BarStart:      "[",
-			BarEnd:        "]",
-		}),
-	)
-	return bar
 }
