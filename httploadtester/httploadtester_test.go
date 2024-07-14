@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"net/http"
+	"net/http/httptest"
 )
 
 func buildBinary(t *testing.T) string {
@@ -35,7 +37,21 @@ func getLastNLines(output string, n int) string {
 	return strings.Join(lines[len(lines)-n:], "\n")
 }
 
+func createTestServer() *httptest.Server {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Handle the request
+		w.WriteHeader(http.StatusOK)
+	})
+
+	server := httptest.NewServer(handler)
+	return server
+}
+
 func TestLoadTester(t *testing.T) {
+
+	server := createTestServer()
+	defer server.Close()
+
 	binary := buildBinary(t)
 	defer func() {
 		_ = exec.Command("rm", binary).Run()
@@ -49,13 +65,18 @@ func TestLoadTester(t *testing.T) {
 	}{
 		{
 			name:    "valid GET request",
-			args:    []string{"-url", "https://google.com", "-qps", "45", "-duration", "10"},
+			args:    []string{"-url", server.URL, "-qps", "45", "-duration", "10"},
 			want:    "Total Requests: 450",
 		},
 		{
 			name:    "missing URL",
 			args:    []string{"-qps", "2", "-duration", "2"},
 			want:    "URL is required",
+		},
+		{
+			name:	"surge requests",
+			args:	[]string{"-url", server.URL , "-qps", "1000", "-duration", "4"},
+			want:	"Total Requests: 4000",
 		},
 	}
 
