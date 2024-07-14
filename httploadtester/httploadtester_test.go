@@ -49,8 +49,8 @@ func TestLoadTester(t *testing.T) {
 	}{
 		{
 			name:    "valid GET request",
-			args:    []string{"-url", "https://google.com", "-qps", "11", "-duration", "1"},
-			want:    "Total Requests: 11",
+			args:    []string{"-url", "https://google.com", "-qps", "45", "-duration", "10"},
+			want:    "Total Requests: 450",
 		},
 		{
 			name:    "missing URL",
