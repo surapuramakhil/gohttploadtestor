@@ -55,18 +55,8 @@ func main() {
 		cancel()
 	}()
 
-	// Initialize the progress bar
-	bar := progressbar.NewOptions(*duration,
-		progressbar.OptionSetDescription("\rRunning load test..."),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        "=",
-			SaucerHead:    ">",
-			SaucerPadding: " ",
-			BarStart:      "[",
-			BarEnd:        "]",
-		}),
-	)
-
+	bar := initializeProgressBar(*duration)
+	
 	// Start a goroutine to update the progress bar
 	go func() {
 		for {
@@ -184,6 +174,7 @@ func printStatus(metrics *Metrics) {
 		averageLatency = totalLatency / time.Duration(len(metrics.Latencies))
 	}
 
+	
 	fmt.Printf("Total Requests: %d | Total Errors: %d | Average Latency: %s", metrics.TotalRequests, metrics.TotalErrors, averageLatency)
 }
 
@@ -204,4 +195,18 @@ func printMetrics(metrics *Metrics) {
 	fmt.Printf("Total Requests: %d\n", metrics.TotalRequests)
 	fmt.Printf("Total Errors: %d\n", metrics.TotalErrors)
 	fmt.Printf("Average Latency: %s\n", averageLatency)
+}
+
+func initializeProgressBar(duration int) *progressbar.ProgressBar {
+	bar := progressbar.NewOptions(duration,
+		progressbar.OptionSetDescription("\r Running load test..."),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "=",
+			SaucerHead:    ">",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+	)
+	return bar
 }
