@@ -44,20 +44,28 @@ Another factor is Developer Experience (high imapact) - My Strongest language is
 3. Metrics Reporting: Report latencies and error rates.
 4. Concurrency: Handle multiple concurrent requests.
 5. Dockerization: Provide a Dockerfile for easy deployment.
+
 ### Additional Features
 1. Configurable Request Headers: Allow users to specify custom headers.
 2. Request Methods: Support different HTTP methods (GET, POST, etc.).
-3. Payload support: passing request body especially usefully for DB write load testing, LLM performace testing etc.
-4. Output Formats: Provide options for different output formats (JSON, plain text).
-5. Graceful Shutdown: Handle interruptions gracefully and report partial results.
+3. test duration: support for setting test duration
+4. Payload support: passing request body especially usefully for DB write load testing, LLM performace testing etc.
+5. Output Format - Progress Bar, current status (at that point of time) , total stats.
+6. Graceful Shutdown: Handle interruptions gracefully and report partial results.
 
 ### Advanced Features
 1. [File Payloads](#file-payload-feature-prioritization-analysis)
 
 ### API Design
-- **CLI Arguments**: Use flags for configuration (e.g., --url, --qps, --method, --headers).
+- **CLI Arguments**: Use flags for configuration (e.g., --url, --qps, --method, --headers, --duration, --file).
 
-- **Metrics**: Collect and display metrics such as average latency, 95th percentile latency, and error rates.
+- **Metrics**: Collect and display metrics such as average latency, perentile and error rates.
+
+<br/>
+
+# Manual
+
+
 
 
 
