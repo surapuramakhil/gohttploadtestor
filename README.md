@@ -9,11 +9,11 @@ Write a program that serves as a general-purpose HTTP load-testing and benchmark
 - Supports a --qps flag to generate requests at a given fixed QPS
 - Reports latencies and error rates
 - Makes a buildable Docker image
+
 #### Restrictions:
-- Takes an HTTP address as input
-- Supports a --qps flag to generate requests at a given fixed QPS
-- Reports latencies and error rates
-- Makes a buildable Docker image
+- You may not use any existing load test or benchmarking library as a dependency.
+- Must be written in one of: Python, Go, C++, TypeScript
+
 #### Evaluation criteria:
 - Thoughtful design of what features such a library should provide. You are expected to implement additional features and functionality beyond the bare minimum requirements.
 - Must provide accurate results. Your results will be compared against a reference implementation.
@@ -27,12 +27,13 @@ Write a program that serves as a general-purpose HTTP load-testing and benchmark
 **Go** stands out as the optimal language for developing a general-purpose HTTP load-testing and benchmarking library. It offers a good balance of performance, ease of use, and concurrency support, making it well-suited for handling high loads and providing accurate benchmarking results.
 
 Factors considered for comparison:
+
 | Category        | Go      | C++        | Python    | TypeScript |
 |-----------------|---------|------------|-----------|------------|
 | Performance     | High    | Very High  | Moderate  | Moderate   |
 | Concurrency     | Excellent | Good     | Moderate  | Good       |
 | Ease of Use     | High    | Low        | Very High | High       |
-| Ecosystem       | Growing | Mature     | Very Mature | Mature    |
+| Ecosystem       | Growing | Mature     | Very Mature | Mature   |
 | Development Speed | Fast  | Slow       | Very Fast | Fast       |
 
 Another factor is Developer Experience (high imapact) - My Strongest language is Java, I am equally skilled in other langauges Python, Go & TypeScript.
