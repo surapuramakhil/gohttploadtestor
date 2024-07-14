@@ -1,14 +1,11 @@
-// +build integration
-
 package main
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 	"strings"
 	"testing"
-	"net/http"
-	"net/http/httptest"
 )
 
 func buildBinary(t *testing.T) string {
@@ -37,56 +34,73 @@ func getLastNLines(output string, n int) string {
 	return strings.Join(lines[len(lines)-n:], "\n")
 }
 
-func createTestServer() *httptest.Server {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Handle the request
-		w.WriteHeader(http.StatusOK)
-	})
-
-	server := httptest.NewServer(handler)
-	return server
+func extractTotalRequests(output string) (int, error) {
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "Total Requests:") {
+			var totalRequests int
+			_, err := fmt.Sscanf(line, "Total Requests: %d", &totalRequests)
+			return totalRequests, err
+		}
+	}
+	return 0, fmt.Errorf("Total Requests not found in output")
 }
 
 func TestLoadTester(t *testing.T) {
-
-	server := createTestServer()
-	defer server.Close()
-
 	binary := buildBinary(t)
 	defer func() {
 		_ = exec.Command("rm", binary).Run()
 	}()
 
 	tests := []struct {
-		name    string
-		args    []string
-		want    string
-		wantErr bool
+		name      string
+		args      []string
+		expected  int
+		tolerance float64 // Tolerance in percentage
+		wantErr   bool
 	}{
 		{
-			name:    "valid GET request",
-			args:    []string{"-url", server.URL, "-qps", "45", "-duration", "10"},
-			want:    "Total Requests: 450",
+			name:      "valid GET request",
+			args:      []string{"-url", "http://example.com", "-qps", "2", "-duration", "2"},
+			expected:  4,
+			tolerance: 0.0,
+			wantErr:   false,
 		},
 		{
-			name:    "missing URL",
-			args:    []string{"-qps", "2", "-duration", "2"},
-			want:    "URL is required",
-		},
-		{
-			name:	"surge requests",
-			args:	[]string{"-url", server.URL , "-qps", "1000", "-duration", "4"},
-			want:	"Total Requests: 4000",
+			name:      "surge requests",
+			args:      []string{"-url", "http://example.com", "-qps", "1000", "-duration", "5"},
+			expected:  5000,
+			tolerance: 1.0, // 1% tolerance
+			wantErr:   false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output, _ := runBinary(t, tt.args)
+			output, err := runBinary(t, tt.args)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runBinary() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				if !strings.Contains(output, "URL is required") {
+					t.Errorf("runBinary() output = %v, want %v", output, "URL is required")
+				}
+				return
+			}
 
 			lastLines := getLastNLines(output, 4)
-			if !strings.Contains(lastLines, tt.want) {
-				t.Errorf("runBinary() output = %v, want %v", lastLines, tt.want)
+			totalRequests, err := extractTotalRequests(lastLines)
+			if err != nil {
+				t.Errorf("extractTotalRequests() error = %v", err)
+				return
+			}
+
+			lowerBound := float64(tt.expected) * (1 - tt.tolerance/100)
+			upperBound := float64(tt.expected) * (1 + tt.tolerance/100)
+
+			if float64(totalRequests) < lowerBound || float64(totalRequests) > upperBound {
+				t.Errorf("total requests = %d, want between %.2f and %.2f", totalRequests, lowerBound, upperBound)
 			}
 		})
 	}

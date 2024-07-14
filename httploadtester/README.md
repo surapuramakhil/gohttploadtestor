@@ -99,6 +99,15 @@ command to run integration tests
 go test -tags integration
 ``` 
 
+### Limits of the system
+
+For higher QPS varice is expected due to external factors such as such as network latency, system performance, or the precision of the timing mechanism (might be due to Ticker & Go Channel , as ticker might drop ticks to make up for slow receivers) .
+
+System perfectly works for low QPS. Guarenteed for under 800.
+
+#### for higher values of load testing
+spawning mulitiple docker containers would solve this.
+
 <br/><br/>
 
 ### TLDR! Additiona Documentation

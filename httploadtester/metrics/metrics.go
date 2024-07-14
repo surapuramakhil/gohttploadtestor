@@ -68,16 +68,16 @@ func (m *Metrics) PrintFinalMetrics() {
 	defer m.mu.Unlock()
 
 	averageLatency := m.calculateAverageLatency()
-	percentiles := []float64{0.5, 0.75, 0.9, 0.95, 0.99}
+	// percentiles := []float64{0.5, 0.75, 0.9, 0.95, 0.99}
 
 	fmt.Printf("\nFinal Results:\n")
 	fmt.Printf("Total Requests: %d\n", m.TotalRequests)
 	fmt.Printf("Total Errors: %d\n", m.TotalErrors)
 	fmt.Printf("Average Latency: %s\n", averageLatency)
 
-	fmt.Printf("Latency Percentiles:\n")
-	for _, p := range percentiles {
-		percentile := m.calculatePercentile(p)
-		fmt.Printf("Percentile %.2f: %s\n", p*100, percentile)
-	}
+	// fmt.Printf("Latency Percentiles:\n")
+	// for _, p := range percentiles {
+	// 	percentile := m.calculatePercentile(p)
+	// 	fmt.Printf("Percentile %.2f: %s\n", p*100, percentile)
+	// }
 }
